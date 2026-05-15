@@ -6,7 +6,7 @@ use crate::meta::MetaAnalyzer;
 use crate::scanner::{RepoWatcher, FileEvent};
 use anyhow::{Context, Result};
 use std::io::{self, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub struct OracleSession {
     pub report: ParseReport,
@@ -15,10 +15,11 @@ pub struct OracleSession {
     pub analyzer: DependencyAnalyzer,
     pub parser: ParserEngine,
     pub watcher: Option<RepoWatcher>,
+    pub root_path: PathBuf,
 }
 
 impl OracleSession {
-    pub fn new(report: ParseReport) -> Result<Self> {
+    pub fn new(report: ParseReport, root_path: PathBuf) -> Result<Self> {
         let query_layer = QueryLayer::new()?;
         let reasoning_engine = ReasoningEngine::new(&report);
         let mut analyzer = DependencyAnalyzer::new();
@@ -32,11 +33,12 @@ impl OracleSession {
             analyzer,
             parser,
             watcher: None,
+            root_path,
         })
     }
 
-    pub fn enable_watcher(&mut self, path: &Path) -> Result<()> {
-        self.watcher = Some(RepoWatcher::new(path)?);
+    pub fn enable_watcher(&mut self) -> Result<()> {
+        self.watcher = Some(RepoWatcher::new(&self.root_path)?);
         Ok(())
     }
 
@@ -63,6 +65,19 @@ impl OracleSession {
                     self.report.files.retain(|f| f.path != path_str);
                     println!("\n[REMOVED] {}", path_str);
                 }
+            }
+        }
+
+        // Handle stale files (subgraph re-index)
+        let stale: Vec<String> = self.analyzer.stale_files.drain().collect();
+        for stale_path_str in stale {
+            // Only re-parse if it's not the file we just handled (it would be in report.files already)
+            // but actually, re-parsing stale files ensures their references are re-resolved
+            // against the NEW global symbol definitions.
+            let full_path = self.root_path.join(&stale_path_str);
+            if full_path.exists() {
+                self.handle_file_change(&full_path)?;
+                println!("  [RE-INDEXED STALE] {}", stale_path_str);
             }
         }
         

@@ -17,6 +17,8 @@ pub struct DependencyAnalyzer {
     pub symbol_usages: HashMap<String, Vec<SymbolReference>>,
     // Maps a symbol name to files where it is defined
     pub symbol_definitions: HashMap<String, Vec<String>>,
+    // Files that need re-validation due to dependency changes
+    pub stale_files: HashSet<String>,
 }
 
 impl DependencyAnalyzer {
@@ -25,6 +27,7 @@ impl DependencyAnalyzer {
             file_dependencies: HashMap::new(),
             symbol_usages: HashMap::new(),
             symbol_definitions: HashMap::new(),
+            stale_files: HashSet::new(),
         }
     }
 
@@ -33,6 +36,7 @@ impl DependencyAnalyzer {
         self.file_dependencies.clear();
         self.symbol_usages.clear();
         self.symbol_definitions.clear();
+        self.stale_files.clear();
 
         // Step 1: Build a global map of where symbols are defined
         for file in &report.files {
@@ -94,8 +98,12 @@ impl DependencyAnalyzer {
         for dependents in self.file_dependencies.values_mut() {
             dependents.retain(|d| d != file_path);
         }
-        // 2. Remove entries where this file was the dependency target (if file deleted)
-        self.file_dependencies.remove(file_path);
+        // 2. Remove entries where this file was the dependency target
+        if let Some(dependents) = self.file_dependencies.remove(file_path) {
+            for dep in dependents {
+                self.stale_files.insert(dep);
+            }
+        }
 
         // 3. Remove from symbol_usages: references from this file are gone
         for usages in self.symbol_usages.values_mut() {
@@ -105,14 +113,24 @@ impl DependencyAnalyzer {
         // 4. Remove from symbol_definitions: definitions in this file are gone
         let mut empty_symbols = Vec::new();
         for (symbol, files) in self.symbol_definitions.iter_mut() {
-            files.retain(|f| f != file_path);
-            if files.is_empty() {
-                empty_symbols.push(symbol.clone());
+            if files.contains(&file_path.to_string()) {
+                files.retain(|f| f != file_path);
+                
+                // If a symbol is removed, all files using it become potentially stale
+                if let Some(usages) = self.symbol_usages.get(symbol) {
+                    for usage in usages {
+                        self.stale_files.insert(usage.file_path.clone());
+                    }
+                }
+
+                if files.is_empty() {
+                    empty_symbols.push(symbol.clone());
+                }
             }
         }
         for sym in empty_symbols {
             self.symbol_definitions.remove(&sym);
-            self.symbol_usages.remove(&sym); // If no definitions, usages are orphaned
+            self.symbol_usages.remove(&sym);
         }
     }
 

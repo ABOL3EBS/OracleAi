@@ -439,7 +439,8 @@ fn handle_shell() -> Result<()> {
         .context("Failed to read parse_report.json. Please run a scan first.")?;
     let report: ParseReport = serde_json::from_str(&report_content)?;
 
-    let mut session = OracleSession::new(report)?;
+    let repo_path = env::current_dir().expect("Failed to get current directory");
+    let mut session = OracleSession::new(report, repo_path)?;
     session.run_repl()?;
 
     Ok(())
@@ -487,8 +488,8 @@ fn handle_watch(args: &[String]) -> Result<()> {
         files: parsed_files,
     };
 
-    let mut session = OracleSession::new(report)?;
-    session.enable_watcher(&repo_path)?;
+    let mut session = OracleSession::new(report, repo_path)?;
+    session.enable_watcher()?;
     session.run_repl()?;
 
     Ok(())
