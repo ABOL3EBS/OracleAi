@@ -1,0 +1,6 @@
+/target
+/scan_report.json
+/parse_report.json
+/refactor_report.json
+/transactions/
+**/*.rs.bk

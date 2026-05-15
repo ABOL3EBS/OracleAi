@@ -1,0 +1,18 @@
+[package]
+name = "oracle-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+walkdir = "2.5.0"
+rayon = "1.10.0"
+anyhow = "1.0.86"
+serde = { version = "1.0.204", features = ["derive"] }
+serde_json = "1.0.120"
+chrono = { version = "0.4.38", features = ["serde"] }
+tree-sitter = "0.22.6"
+tree-sitter-rust = "0.21.2"
+tree-sitter-python = "0.21.0"
+tree-sitter-javascript = "0.21.0"
+tree-sitter-typescript = "0.21.1"
+notify = "6.1.1"

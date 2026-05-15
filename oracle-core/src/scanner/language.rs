@@ -1,0 +1,32 @@
+pub fn detect_language(extension: &str) -> String {
+    let lang = match extension.to_lowercase().as_str() {
+        "rs" => "Rust",
+        "py" => "Python",
+        "js" => "JavaScript",
+        "ts" => "TypeScript",
+        "tsx" => "TypeScript (React)",
+        "jsx" => "JavaScript (React)",
+        "go" => "Go",
+        "java" => "Java",
+        "c" => "C",
+        "cpp" | "cc" | "cxx" => "C++",
+        "h" => "C Header",
+        "hpp" | "hh" | "hxx" => "C++ Header",
+        "cs" => "C#",
+        "php" => "PHP",
+        "rb" => "Ruby",
+        "swift" => "Swift",
+        "kt" | "kts" => "Kotlin",
+        "md" => "Markdown",
+        "json" => "JSON",
+        "yaml" | "yml" => "YAML",
+        "toml" => "TOML",
+        "html" => "HTML",
+        "css" => "CSS",
+        "sql" => "SQL",
+        "sh" | "bash" => "Shell",
+        "dockerfile" => "Dockerfile",
+        _ => "Unknown",
+    };
+    lang.to_string()
+}
